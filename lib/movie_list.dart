@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'http_helper.dart';
 import 'movie.dart';
+import 'movie_detail.dart';
 
 class MovieList extends StatefulWidget {
   MovieList({Key key}) : super(key: key);
@@ -14,14 +15,22 @@ class _MovieListState extends State<MovieList> {
   List movies;
   int moviesCount;
   HttpHelper httpHelper;
+  bool listMode;
 
   @override
   void initState() {
     httpHelper = HttpHelper();
     movies = List();
     moviesCount = 0;
+    listMode = true;
     loadMore();
     super.initState();
+  }
+
+  void onChange() {
+    setState(() {
+      listMode = !listMode;
+    });
   }
 
   Future loadMore() async {
@@ -37,46 +46,107 @@ class _MovieListState extends State<MovieList> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Movies'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.update),
+            onPressed: onChange,
+          ),
+        ],
       ),
-      body: ListView.builder(
-          itemCount: movies.length,
-          itemBuilder: (BuildContext context, int index) {
-            return MovieRow(movies[index]);
-          }),
+      body: AnimatedSwitcher(
+        duration: Duration(milliseconds: 700),
+        child: listMode
+            ? ListView.builder(
+                itemCount: movies.length,
+                itemBuilder: (BuildContext context, int index) {
+                  return MovieRow(movies[index], listMode);
+                },
+              )
+            : GridView.builder(
+                itemCount: movies.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 1.0,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (BuildContext context, int index) {
+                  return MovieRow(movies[index], listMode);
+                },
+              ),
+      ),
     );
   }
 }
 
 class MovieRow extends StatefulWidget {
   final Movie movie;
-  MovieRow(this.movie);
+  final bool listMode;
+  MovieRow(this.movie, this.listMode);
 
   @override
-  _MovieRowState createState() => _MovieRowState(movie);
+  _MovieRowState createState() => _MovieRowState(movie, listMode);
 }
 
 class _MovieRowState extends State<MovieRow> {
   final Movie movie;
-  _MovieRowState(this.movie);
+  final bool listMode;
+  _MovieRowState(this.movie, this.listMode);
+  bool isFavorite;
+
+  @override
+  void initState() {
+    isFavorite = false;
+    super.initState();
+  }
+
+  void goDetails() {
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => MovieDetail(movie)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
+      color: Colors.white,
+      elevation: 2.0,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
+        children: [
           ListTile(
-            leading: ConstrainedBox(
-              constraints: BoxConstraints(
-                minWidth: 0,
-                minHeight: 0,
-                maxWidth: 84,
-                maxHeight: 84,
+            leading: Hero(
+              tag: movie.title,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 10.0),
+                child: Image.network(
+                  'https://image.tmdb.org/t/p/original/' + movie.posterPath,
+                ),
               ),
-              child: Image.network(
-                  'https://image.tmdb.org/t/p/original/' + movie.posterPath),
             ),
-            title: Text(movie.title),
-            subtitle: Text(movie.overview),
+            title: listMode ? Text(movie.title) : Text(""),
+            //subtitle: Text(movie.overview),
+
+            trailing: IconButton(
+              icon: Icon(Icons.favorite),
+              color: isFavorite ? Colors.red : Colors.grey,
+              onPressed: () {
+                setState(() {
+                  isFavorite = !isFavorite;
+                });
+              },
+            ),
+            onTap: () => goDetails(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: listMode
+                ? null
+                : Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Text(movie.title),
+                      ),
+                    ],
+                  ),
           ),
         ],
       ),
