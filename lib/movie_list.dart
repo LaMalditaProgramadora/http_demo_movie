@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:http_demo_movie/db_helper.dart';
 
 import 'http_helper.dart';
 import 'movie.dart';
@@ -54,7 +55,7 @@ class _MovieListState extends State<MovieList> {
         ],
       ),
       body: AnimatedSwitcher(
-        duration: Duration(milliseconds: 700),
+        duration: Duration(milliseconds: 1200),
         child: listMode
             ? ListView.builder(
                 itemCount: movies.length,
@@ -91,18 +92,29 @@ class MovieRow extends StatefulWidget {
 class _MovieRowState extends State<MovieRow> {
   final Movie movie;
   final bool listMode;
+  DBHelper dbHelper;
   _MovieRowState(this.movie, this.listMode);
   bool isFavorite;
 
   @override
   void initState() {
     isFavorite = false;
+    dbHelper = DBHelper();
+    _isFavorite();
     super.initState();
   }
 
   void goDetails() {
     Navigator.of(context)
         .push(MaterialPageRoute(builder: (_) => MovieDetail(movie)));
+  }
+
+  Future _isFavorite() async {
+    await dbHelper.openDb();
+    bool check = await dbHelper.isFavorite(movie);
+    setState(() {
+      isFavorite = check;
+    });
   }
 
   @override
@@ -129,6 +141,9 @@ class _MovieRowState extends State<MovieRow> {
               icon: Icon(Icons.favorite),
               color: isFavorite ? Colors.red : Colors.grey,
               onPressed: () {
+                isFavorite
+                    ? dbHelper.deleteMovie(movie)
+                    : dbHelper.insertMovie(movie);
                 setState(() {
                   isFavorite = !isFavorite;
                 });

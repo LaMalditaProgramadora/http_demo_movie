@@ -11,4 +11,11 @@ class Movie {
     this.overview = parsedJson['overview'];
     this.posterPath = parsedJson['poster_path'];
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+    };
+  }
 }
