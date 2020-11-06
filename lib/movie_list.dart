@@ -17,6 +17,7 @@ class _MovieListState extends State<MovieList> {
   int moviesCount;
   HttpHelper httpHelper;
   bool listMode;
+  int movieType = 0;
 
   @override
   void initState() {
@@ -34,8 +35,18 @@ class _MovieListState extends State<MovieList> {
     });
   }
 
+  void onChangeMovieType() {
+    setState(() {
+      if (movieType == 0)
+        movieType = 1;
+      else
+        movieType = 0;
+    });
+    initState();
+  }
+
   Future loadMore() async {
-    List result = await httpHelper.getUpcoming();
+    List result = await httpHelper.getMovies(movieType);
     setState(() {
       moviesCount = result.length;
       movies = result;
@@ -52,30 +63,31 @@ class _MovieListState extends State<MovieList> {
             icon: Icon(Icons.update),
             onPressed: onChange,
           ),
+          IconButton(
+            icon: Icon(Icons.movie),
+            onPressed: onChangeMovieType,
+          ),
         ],
       ),
-      body: AnimatedSwitcher(
-        duration: Duration(milliseconds: 1200),
-        child: listMode
-            ? ListView.builder(
-                itemCount: movies.length,
-                itemBuilder: (BuildContext context, int index) {
-                  return MovieRow(movies[index], listMode);
-                },
-              )
-            : GridView.builder(
-                itemCount: movies.length,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 1.0,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                ),
-                itemBuilder: (BuildContext context, int index) {
-                  return MovieRow(movies[index], listMode);
-                },
+      body: listMode
+          ? ListView.builder(
+              itemCount: movies.length,
+              itemBuilder: (BuildContext context, int index) {
+                return MovieRow(movies[index], listMode);
+              },
+            )
+          : GridView.builder(
+              itemCount: movies.length,
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 1.0,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
               ),
-      ),
+              itemBuilder: (BuildContext context, int index) {
+                return MovieRow(movies[index], listMode);
+              },
+            ),
     );
   }
 }
@@ -98,15 +110,14 @@ class _MovieRowState extends State<MovieRow> {
 
   @override
   void initState() {
-    isFavorite = false;
     dbHelper = DBHelper();
     _isFavorite();
     super.initState();
   }
 
-  void goDetails() {
+  void goDetails(isFavorite) {
     Navigator.of(context)
-        .push(MaterialPageRoute(builder: (_) => MovieDetail(movie)));
+        .push(MaterialPageRoute(builder: (_) => MovieDetail(movie, isFavorite)));
   }
 
   Future _isFavorite() async {
@@ -119,19 +130,17 @@ class _MovieRowState extends State<MovieRow> {
 
   @override
   Widget build(BuildContext context) {
+    _isFavorite();
     return Card(
       color: Colors.white,
       elevation: 2.0,
       child: Column(
         children: [
           ListTile(
-            leading: Hero(
-              tag: movie.title,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 10.0),
-                child: Image.network(
-                  'https://image.tmdb.org/t/p/original/' + movie.posterPath,
-                ),
+            leading: Padding(
+              padding: const EdgeInsets.only(top: 10.0),
+              child: Image.network(
+                'https://image.tmdb.org/t/p/original/' + movie.posterPath,
               ),
             ),
             title: listMode ? Text(movie.title) : Text(""),
@@ -149,7 +158,7 @@ class _MovieRowState extends State<MovieRow> {
                 });
               },
             ),
-            onTap: () => goDetails(),
+            onTap: () => goDetails(isFavorite),
           ),
           Padding(
             padding: const EdgeInsets.all(8.0),
